@@ -149,60 +149,6 @@ Template.prototype = {
 		return index;
 	},
 
-	// removeNextChar: function(start, text) {
-	// 	var chars = text.split("");
-
-	// 	if (start < 0) {
-	// 		return {
-	// 			text: text,
-	// 			start: 0,
-	// 			end: 0,
-	// 			length: 0
-	// 		};
-	// 	}
-
-	// 	var actualStart = this._nextCharIndex(start, this.grammar.any, chars),
-	// 	    i = actualStart,
-	// 	    type,
-	// 	    shiftIndex = -1,
-	// 	    charCount = chars.length,
-	// 	    direction = 1;
-
-	// 	if (actualStart > -1) {
-	// 		type = this.maskChars[i];
-
-	// 		var callback = function(x) { return x < charCount; };
-
-	// 		//for (i; i < charCount; i++) {
-	// 		while (callback(i)) {
-	// 			if (type.test(chars[i])) {
-	// 				shiftIndex = (shiftIndex === -1)
-	// 				           ? this._nextCharIndex(i + 1, type, chars)
-	// 				           : this._nextCharIndex(shiftIndex + 1, type, chars);
-
-	// 				if (shiftIndex > -1 && shiftIndex < charCount && type.test(chars[shiftIndex])) {
-	// 					chars[i] = chars[shiftIndex];
-	// 				}
-	// 				else {
-	// 					chars[i] = this.grammar.placeholder;
-	// 				}
-	// 			}
-
-	// 			i += direction;
-	// 		}
-	// 	}
-	// 	else {
-	// 		actualStart = start;
-	// 	}
-
-	// 	return {
-	// 		text: chars.join(""),
-	// 		start: actualStart,
-	// 		end: actualStart,
-	// 		length: 0
-	// 	};
-	// },
-
 	removeNextChar: function(start, text) {
 		return this.removeChars(start, 1, 1, text);
 	},
@@ -274,39 +220,6 @@ Template.prototype = {
 			length: 0
 		};
 	},
-
-	// TODO: Is this the same as removeNextChar with count = 1?
-	// removeChars: function(start, count, chars) {
-	// 	if (start < 0) {
-	// 		return chars;
-	// 	}
-
-	// 	var i = this._nextCharIndex(start, this.grammar.any, chars),
-	// 	    charCount = chars.length,
-	// 	    shiftIndex = i + count - 1,
-	// 	    type;
-
-	// 	if (i > -1 && i < this.maskChars.length) {
-	// 		type = this.maskChars[i] || null;
-
-	// 		for (i; i < charCount; i++) {
-	// 			if (type.test(chars[i])) {
-	// 				shiftIndex = (shiftIndex === -1)
-	// 				           ? this._nextCharIndex(i + count, type, chars)
-	// 				           : this._nextCharIndex(shiftIndex + 1, type, chars);
-
-	// 				if (shiftIndex > -1 && shiftIndex < charCount && type.test(chars[shiftIndex])) {
-	// 					chars[i] = chars[shiftIndex];
-	// 				}
-	// 				else {
-	// 					chars[i] = this.grammar.placeholder;
-	// 				}
-	// 			}
-	// 		}
-	// 	}
-
-	// 	return chars;
-	// },
 
 	setMask: function(mask) {
 		if (!this.grammar) {
