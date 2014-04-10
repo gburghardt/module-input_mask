@@ -41,6 +41,7 @@ InputMaskModule.prototype = {
 			}
 
 			this.element.removeEventListener("focus", this.handleFocusIn, true);
+			this.element.removeEventListener("blur", this.handleFocusOut, true);
 			this.element.removeEventListener("keypress", this.handleKeyPress, false);
 		}
 
@@ -128,7 +129,10 @@ InputMaskModule.prototype = {
 
 		element.value = template.getMaskedValue(element.value);
 		index = element.value.indexOf(template.getPlaceholder());
-		element.setSelectionRange(index, index);
+
+		if (index > -1) {
+			element.setSelectionRange(index, index);
+		}
 	}
 
 };
