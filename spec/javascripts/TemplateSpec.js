@@ -118,7 +118,7 @@ describe("InputMaskModule.Template", function() {
 				template.setMask("(###) ###-####");
 			});
 
-			xit("leaves the text unchanged when the cursor is at the first character", function() {
+			it("leaves the text unchanged when the cursor is at the first character", function() {
 				var text = "(123) 456-7890";
 				var selection = template.removePrevChar(0, text);
 
@@ -128,36 +128,46 @@ describe("InputMaskModule.Template", function() {
 				expect(selection.length).toBe(0);
 			});
 
-			xit("leaves default values alone", function() {
+			it("leaves default values alone", function() {
 				var text = "(___) ___-____";
 				var selection = template.removePrevChar(2, text);
 
 				expect(selection.text).toBe(text);
 				expect(selection.start).toBe(2);
 				expect(selection.end).toBe(2);
-				expect(selection.length).toBe(1);
+				expect(selection.length).toBe(0);
 			});
 
-			xit("removes the previous character", function() {
-				//             |
+			it("is the same when removing previous or next", function() {
+				var text = "(123) 456-7890",
+				    s1 = template.removePrevChar(3, text),
+				    s2 = template.removeNextChar(2, text),
+				    expectedText = "(134) 567-890_";
+
+				expect(s1.text).toBe(expectedText);
+				expect(s2.text).toBe(expectedText);
+			});
+
+			it("removes the previous character", function() {
+				//            ><
 				var text = "(123) 456-7890";
 				var selection = template.removePrevChar(3, text);
 
 				expect(selection.text).toBe("(134) 567-890_");
-				expect(selection.start).toBe(3);
-				expect(selection.end).toBe(3);
-				expect(selection.length).toBe(1);
+				expect(selection.start).toBe(2);
+				expect(selection.end).toBe(2);
+				expect(selection.length).toBe(0);
 			});
 
-			xit("skips filler characters", function() {
-				//                |
+			it("skips filler characters", function() {
+				//               ><
 				var text = "(123) 456-7890";
 				var selection = template.removePrevChar(6, text);
 
 				expect(selection.text).toBe("(124) 567-890_");
 				expect(selection.start).toBe(3);
 				expect(selection.end).toBe(3);
-				expect(selection.length).toBe(1);
+				expect(selection.length).toBe(0);
 			});
 
 		});
@@ -182,7 +192,7 @@ describe("InputMaskModule.Template", function() {
 
 			all("default values remain unchanged", [ 0, 14, 1, 5, 6 ], function(start) {
 				var text = "(___) ___-____";
-				var selection = template.removeChars(start, 1, 1, text);
+				var selection = template.removeChars(start, 1, template.DIRECTION_FORWARDS, text);
 
 				expect(selection.text).toBe("(___) ___-____");
 				expect(selection.start).toBe(start);
@@ -192,7 +202,7 @@ describe("InputMaskModule.Template", function() {
 
 			it("shifts one character to the left when the cursor is at the beginning", function() {
 				var text = "(123) 456-7890";
-				var selection = template.removeChars(0, 1, 1, text);
+				var selection = template.removeChars(0, 0, template.DIRECTION_FORWARDS, text);
 
 				expect(selection.text).toBe("(234) 567-890_");
 				expect(selection.start).toBe(1);
@@ -200,9 +210,14 @@ describe("InputMaskModule.Template", function() {
 				expect(selection.length).toBe(0);
 			});
 
+			it("backspaces the last character when the cursor is at the end", function() {
+				var text = "(123) 456-7890";
+				var selection = template.removeChars(10, 0, template.DIRECTION_BACKWARDS, text);
+			});
+
 			it("does nothing if the cursor is at the end", function() {
 				var text = "(123) 456-7890";
-				var selection = template.removeChars(14, 1, 1, text);
+				var selection = template.removeChars(14, 0, template.DIRECTION_FORWARDS, text);
 
 				expect(selection.text).toBe("(123) 456-7890");
 				expect(selection.start).toBe(14);
@@ -212,7 +227,7 @@ describe("InputMaskModule.Template", function() {
 
 			it("deletes a character when the cursor is on the last non filler character", function() {
 				var text = "(123) 456-7890";
-				var selection = template.removeChars(13, 1, 1, text);
+				var selection = template.removeChars(13, 0, template.DIRECTION_FORWARDS, text);
 
 				expect(selection.text).toBe("(123) 456-789_");
 				expect(selection.start).toBe(13);
@@ -222,7 +237,7 @@ describe("InputMaskModule.Template", function() {
 
 			it("shifts one character to the left when the cursor is at a filler character", function() {
 				var text = "(123) 4__-____";
-				var selection = template.removeChars(4, 1, 1, text);
+				var selection = template.removeChars(4, 0, template.DIRECTION_FORWARDS, text);
 
 				expect(selection.text).toBe("(123) ___-____");
 				expect(selection.start).toBe(6);
@@ -232,7 +247,7 @@ describe("InputMaskModule.Template", function() {
 
 			it("shifts one character to the left", function() {
 				var text = "(123) 4__-____";
-				var selection = template.removeChars(2, 1, 1, text);
+				var selection = template.removeChars(2, 0, template.DIRECTION_FORWARDS, text);
 
 				expect(selection.text).toBe("(134) ___-____");
 				expect(selection.start).toBe(2);
@@ -243,7 +258,7 @@ describe("InputMaskModule.Template", function() {
 			it("removes multiple characters", function() {
 				//           __
 				var text = "(123) 4__-____";
-				var selection = template.removeChars(1, 2, 1, text);
+				var selection = template.removeChars(1, 2, template.DIRECTION_FORWARDS, text);
 
 				expect(selection.text).toBe("(__3) 4__-____");
 				expect(selection.start).toBe(1);
@@ -262,7 +277,7 @@ describe("InputMaskModule.Template", function() {
 			it("removes characters from multiple types", function() {
 				//           ____
 				var text = "123-CDH";
-				var selection = template.removeChars(1, 4, 1, text);
+				var selection = template.removeChars(1, 4, template.DIRECTION_FORWARDS, text);
 
 				expect(selection.text).toBe("1__-_DH");
 				expect(selection.start).toBe(1);

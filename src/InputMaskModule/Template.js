@@ -51,6 +51,9 @@ Template.register = function(name, mask) {
 
 Template.prototype = {
 
+	DIRECTION_BACKWARDS: -1,
+	DIRECTION_FORWARDS: 1,
+
 	grammar: null,
 
 	mask: "",
@@ -134,15 +137,25 @@ Template.prototype = {
 		}
 	},
 
-	_nextCharIndex: function(start, type, chars) {
+	_nextCharIndex: function(start, direction, type, chars) {
 		var index = -1,
 		    i = start,
 		    length = chars.length;
 
-		for (i; i < length; i++) {
-			if (type.test(chars[i])) {
-				index = i;
-				break;
+		if (direction === 1) {
+			for (i; i < length; i++) {
+				if (type.test(chars[i])) {
+					index = i;
+					break;
+				}
+			}
+		}
+		else {
+			while (i--) {
+				if (type.test(chars[i])) {
+					index = i;
+					break;
+				}
 			}
 		}
 
@@ -150,75 +163,83 @@ Template.prototype = {
 	},
 
 	removeNextChar: function(start, text) {
-		return this.removeChars(start, 1, 1, text);
+		return this.removeChars(start, 0, this.DIRECTION_FORWARDS, text);
 	},
 
 	removePrevChar: function(start, text) {
-		throw new Error("Not Implemented!");
+		return this.removeChars(start, 0, this.DIRECTION_BACKWARDS, text);
 	},
 
 	removeChars: function(start, count, direction, text) {
 		start = (start < 0) ? 0 : start;
-		count = (count <= 0) ? 1 : count;
+		count = (count < 0) ? 0 : count;
 		direction = direction < 0 ? -1 : 1;
 
-		var chars = text.split(""),
-		    actualStart = this._nextCharIndex(start, this.grammar.any, chars),
+		var selection = { text: null, start: start, end: start, length: 0 },
+		    chars = text.split("");
+
+		if (count === 0) {
+			this._shiftCharacters(selection, start, direction, chars);
+		}
+		else {
+			this._removeCharacterRange(selection, start, count, chars);
+		}
+
+		selection.text = chars.join("");
+
+		return selection;
+	},
+
+	_removeCharacterRange: function(selection, start, count, chars) {
+		var actualStart = this._nextCharIndex(start, 1, this.grammar.any, chars),
 		    i = actualStart,
-		    type, condition,
+		    charCount = chars.length,
+		    length = (i + count > charCount)
+		           ? charCount
+		           : i + count,
+		    type = this.grammar.any;
+
+		if (i < 0 || i >= charCount - 1) {
+			return;
+		}
+
+		for (i; i < length; i++) {
+			if (type.test(chars[i])) {
+				chars[i] = this.grammar.placeholder;
+			}
+		}
+
+		selection.start = selection.end = actualStart;
+	},
+
+	_shiftCharacters: function(selection, start, direction, chars) {
+		var count = 1,
+		    actualStart = this._nextCharIndex(start, direction, this.grammar.any, chars),
+		    i = actualStart,
+		    type = this.maskChars[i],
 		    shiftIndex = -1,
 		    charCount = chars.length;
 
-		if (actualStart > -1) {
-			if (count === 1) {
-				// TODO: Put this into a function: _shiftCharacters(...)
-				type = this.maskChars[i];
-				condition = (direction === 1)
-			          ? function(x) { return x < charCount; }
-			          : function(x) { return x >= 0 };
+		if (i < 0 || i >= charCount) {
+			return;
+		}
 
-				while (condition(i)) {
-					if (type.test(chars[i])) {
-						shiftIndex = (shiftIndex === -1)
-						           ? this._nextCharIndex(i + count, type, chars)
-						           : this._nextCharIndex(shiftIndex + 1, type, chars);
+		for (i; i < charCount; i++) {
+			if (type.test(chars[i])) {
+				shiftIndex = (shiftIndex === -1)
+				           ? this._nextCharIndex(i + count, this.DIRECTION_FORWARDS, type, chars)
+				           : this._nextCharIndex(shiftIndex + 1, this.DIRECTION_FORWARDS, type, chars);
 
-						if (shiftIndex > -1 && shiftIndex < charCount && type.test(chars[shiftIndex])) {
-							chars[i] = chars[shiftIndex];
-						}
-						else {
-							chars[i] = this.grammar.placeholder;
-						}
-					}
-
-					i += direction;
+				if (shiftIndex > -1 && shiftIndex < charCount && type.test(chars[shiftIndex])) {
+					chars[i] = chars[shiftIndex];
 				}
-			}
-			else {
-				// TODO: Put this into a function: _removeRange(...)
-				var length = (i + count > charCount)
-				           ? charCount
-				           : i + count;
-
-				type = this.grammar.any;
-
-				for (i; i < length; i++) {
-					if (type.test(chars[i])) {
-						chars[i] = this.grammar.placeholder;
-					}
+				else {
+					chars[i] = this.grammar.placeholder;
 				}
 			}
 		}
-		else {
-			actualStart = start;
-		}
 
-		return {
-			text: chars.join(""),
-			start: actualStart,
-			end: actualStart,
-			length: 0
-		};
+		selection.start = selection.end = actualStart;
 	},
 
 	setMask: function(mask) {
