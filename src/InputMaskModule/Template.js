@@ -66,26 +66,54 @@ Template.prototype = {
 
 	addCharacter: function(start, newChar, text) {
 		var chars = text.split(""),
-		    actualStart = this._nextCharIndex(start, this.DIRECTION_FORWARDS, this.grammar.anyOrPlaceholder, chars),
+		    type = this.grammar.anyOrPlaceholder,
+		    actualStart = this._nextCharIndex(start, this.DIRECTION_FORWARDS, type, chars),
 		    i = actualStart,
 		    charCount = chars.length,
-		    selection = { text: text, start: actualStart, end: actualStart, length: 0 };
+		    selection = new Selection(actualStart, actualStart, text);
 
 		if (actualStart < 0) {
-			selection.start = selection.end = start;
+			selection.setRange(start);
 		}
 		else if (this._isValidCharAt(newChar, actualStart)) {
 			chars[actualStart] = newChar;
-			i = this._nextCharIndex(actualStart + 1, this.DIRECTION_FORWARDS, this.grammar.anyOrPlaceholder, chars);
+			i = this._nextCharIndex(actualStart + 1, this.DIRECTION_FORWARDS, type, chars);
 
 			if (i > -1) {
 				selection.text = chars.join("");
-				selection.start = selection.end = i;
+				selection.setRange(i);
 			}
 			else if (actualStart === charCount - 1) {
 				selection.text = chars.join("");
-				selection.start = selection.end = charCount;
+				selection.setRange(charCount);
 			}
+		}
+
+		return selection;
+	},
+
+	addCharacters: function(start, newChars, text) {
+		var i = 0,
+		    chars = text.split(""),
+		    type = this.grammar.anyOrPlaceholder,
+		    index, selection, c;
+
+		if (start >= chars.length) {
+			selection = new Selection(start, start, text);
+		}
+		else {
+			index = this._nextCharIndex(start, this.DIRECTION_FORWARDS, type, chars);
+			selection = new Selection(index, index);
+
+			while (c = newChars.charAt(i++)) {
+				if (this._isValidCharAt(c, index)) {
+					chars[index] = c;
+					index = this._nextCharIndex(index + 1, this.DIRECTION_FORWARDS, type, chars);;
+					selection.setRange((index > -1) ? index : chars.length);
+				}
+			}
+
+			selection.text = chars.join("");
 		}
 
 		return selection;
@@ -180,7 +208,7 @@ Template.prototype = {
 		count = (count < 0) ? 0 : count;
 		direction = direction < 0 ? -1 : 1;
 
-		var selection = { text: null, start: start, end: start, length: 0 },
+		var selection = new Selection(start, start),
 		    chars = text.split("");
 
 		if (count === 0) {
@@ -287,5 +315,36 @@ Template.prototype = {
 };
 
 InputMaskModule.Template = Template;
+
+function Selection(start, end, text) {
+	if (typeof start === "number") {
+		this.setRange(start, end);
+	}
+
+	if (text !== undefined) {
+		this.text = text;
+	}
+}
+
+Selection.prototype = {
+	end: 0,
+	length: 0,
+	start: 0,
+	text: null,
+
+	constructor: Selection,
+
+	setRange: function(start, end) {
+		if (end === undefined) {
+			this.start = this.end = start;
+		}
+		else {
+			this.start = start;
+			this.end = end;
+		}
+
+		this.length = this.end - this.start;
+	}
+};
 
 })(InputMaskModule);

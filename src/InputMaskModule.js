@@ -2,13 +2,19 @@ function InputMaskModule() {
 	this.options = {};
 	this.handleFocusIn = this.handleFocusIn.bind(this);
 	this.handleFocusOut = this.handleFocusOut.bind(this);
+	this.handleKeyDown = this.handleKeyDown.bind(this);
 	this.handleKeyPress = this.handleKeyPress.bind(this);
+	this.handleKeyUp = this.handleKeyUp.bind(this);
+	this.handlePaste = this.handlePaste.bind(this);
 }
 
 InputMaskModule.prototype = {
 
 	KEYCODE_BACKSPACE: 8,
+	KEYCODE_CONTROL: 17,
 	KEYCODE_DELETE: 46,
+
+	_controlKeyDown: false,
 
 	document: null,
 
@@ -29,7 +35,10 @@ InputMaskModule.prototype = {
 
 		this.element.addEventListener("focus", this.handleFocusIn, true);
 		this.element.addEventListener("blur", this.handleFocusOut, true);
+		this.element.addEventListener("keydown", this.handleKeyDown, false);
 		this.element.addEventListener("keypress", this.handleKeyPress, false);
+		this.element.addEventListener("keyup", this.handleKeyUp, false);
+		this.element.addEventListener("paste", this.handlePaste, false);
 
 		return this;
 	},
@@ -42,10 +51,17 @@ InputMaskModule.prototype = {
 
 			this.element.removeEventListener("focus", this.handleFocusIn, true);
 			this.element.removeEventListener("blur", this.handleFocusOut, true);
+			this.element.removeEventListener("keydown", this.handleKeyDown, false);
 			this.element.removeEventListener("keypress", this.handleKeyPress, false);
+			this.element.removeEventListener("keyup", this.handleKeyUp, false);
+			this.element.removeEventListener("paste", this.handlePaste, false);
 		}
 
 		this.element = this.document = this.window = null;
+	},
+
+	_getTemplate: function(element) {
+		return InputMaskModule.Template.getByElement(element);
 	},
 
 	handleFocusIn: function(event) {
@@ -64,10 +80,18 @@ InputMaskModule.prototype = {
 		}
 	},
 
+	handleKeyDown: function(event) {
+		if ((event || window.event).keyCode === this.KEYCODE_CONTROL) {
+			this._controlKeyDown = true;
+		}
+	},
+
 	handleKeyPress: function(event) {
 		event = event || window.event;
 
-		if (!this._isMaskable(event.target) || this._filteredKeys.indexOf(event.keyCode) > -1) {
+		if (!this._isMaskable(event.target)
+			|| this._filteredKeys.indexOf(event.keyCode) > -1
+			|| this._controlKeyDown) {
 			return;
 		}
 
@@ -79,7 +103,7 @@ InputMaskModule.prototype = {
 		    start = element.selectionStart,
 		    end = element.selectionEnd,
 		    value = element.value,
-		    template = InputMaskModule.Template.getByElement(element),
+		    template = this._getTemplate(element),
 		    selection = null;
 
 		if (this.KEYCODE_BACKSPACE === keyCode) {
@@ -100,10 +124,35 @@ InputMaskModule.prototype = {
 		element.setSelectionRange(selection.start, selection.end);
 	},
 
-	_hideMask: function(element) {
-		var template = InputMaskModule.Template.getByElement(element);
+	handleKeyUp: function(event) {
+		if ((event || window.event).keyCode === this.KEYCODE_CONTROL) {
+			this._controlKeyDown = false;
+		}
+	},
 
-		if (template.isEmptyValue(element.value)) {
+	handlePaste: function(event) {
+		event = event || window.event;
+
+		if (!this._isMaskable(event.target)) {
+			return;
+		}
+
+		event.preventDefault();
+
+		var clipboard = event.clipboardData,
+		    element = event.target,
+		    template, selection;
+
+		if (clipboard.types.contains("text/plain")) {
+			template = this._getTemplate(element);
+			selection = template.addCharacters(element.selectionStart, clipboard.getData("text/plain"), element.value);
+			element.value = selection.text;
+			element.setSelectionRange(selection.start, selection.end);
+		}
+	},
+
+	_hideMask: function(element) {
+		if (this._getTemplate(element).isEmptyValue(element.value)) {
 			element.value = "";
 		}
 	},
@@ -124,14 +173,18 @@ InputMaskModule.prototype = {
 	},
 
 	_showMask: function(element) {
-		var template = InputMaskModule.Template.getByElement(element),
+		var template = this._getTemplate(element),
 		    index = -1;
 
 		element.value = template.getMaskedValue(element.value);
 		index = element.value.indexOf(template.getPlaceholder());
 
 		if (index > -1) {
-			element.setSelectionRange(index, index);
+			// Chrome won't allow you to set the selection when the focus event
+			// is triggered by a click, so we wait and then set the selection.
+			setTimeout(function() {
+				element.setSelectionRange(index, index);
+			}, 10);
 		}
 	}
 

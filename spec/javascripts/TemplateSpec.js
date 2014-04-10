@@ -75,6 +75,79 @@ describe("InputMaskModule.Template", function() {
 
 	});
 
+	describe("addCharacters", function() {
+
+		var text = "___-___";
+
+		beforeEach(function() {
+			template.setMask("AAA-###");
+		});
+
+		it("adds multiple characters", function() {
+			var selection = template.addCharacters(0, "ABC1", text);
+
+			expect(selection.text).toBe("ABC-1__");
+			expect(selection.start).toBe(5);
+			expect(selection.end).toBe(5);
+			expect(selection.length).toBe(0);
+		});
+
+		it("adds a single character", function() {
+			var selection = template.addCharacters(0, "A", text);
+
+			expect(selection.text).toBe("A__-___");
+			expect(selection.start).toBe(1);
+			expect(selection.end).toBe(1);
+			expect(selection.length).toBe(0);
+		});
+
+		it("does not add characters at invalid positions", function() {
+			var selection = template.addCharacters(0, "12", text);
+
+			expect(selection.text).toBe(text);
+			expect(selection.start).toBe(0);
+			expect(selection.end).toBe(0);
+			expect(selection.length).toBe(0);
+		});
+
+		it("does not add characters outside the bounds of the mask", function() {
+			var selection = template.addCharacters(0, "ABC1234", text);
+
+			expect(selection.text).toBe("ABC-123");
+			expect(selection.start).toBe(7);
+			expect(selection.end).toBe(7);
+			expect(selection.length).toBe(0);
+		});
+
+		it("adds characters across character types", function() {
+			var selection = template.addCharacters(1, "BC123", text);
+
+			expect(selection.text).toBe("_BC-123");
+			expect(selection.start).toBe(7);
+			expect(selection.end).toBe(7);
+			expect(selection.length).toBe(0);
+		});
+
+		it("omits characters that are invalid when adding multiple types", function() {
+			var selection = template.addCharacters(1, "1BC23", text);
+
+			expect(selection.text).toBe("_BC-23_");
+			expect(selection.start).toBe(6);
+			expect(selection.end).toBe(6);
+			expect(selection.length).toBe(0);
+		});
+
+		it("does nothing when adding characters to the end", function() {
+			var selection = template.addCharacters(7, "987", text);
+
+			expect(selection.text).toBe("___-___");
+			expect(selection.start).toBe(7);
+			expect(selection.end).toBe(7);
+			expect(selection.length).toBe(0);
+		});
+
+	});
+
 	describe("getMaskedValue", function() {
 
 		beforeEach(function() {

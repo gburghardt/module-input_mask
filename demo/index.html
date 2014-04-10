@@ -2,17 +2,80 @@
 <html>
 <head>
 	<title>Input Masks Demo</title>
+	<style type="text/css">
+		body {
+			margin: 2em auto;
+			padding: 0;
+			width: 40em;
+		}
+	</style>
 </head>
 <body>
-	Telephone: <input type="text" data-mask="(###) ###-####"><br>
-	Fax: <input type="text" data-mask="(###) ###-####" value="(555) 382-9476"><br>
-	SKU: <input type="text" data-mask="AAA ##-####">
+	<table>
+		<tr>
+			<td>Telephone:</td>
+			<td><input type="text" data-mask="(###) ###-####"></td>
+		</tr>
+		<tr>
+			<td>Fax:</td>
+			<td><input type="text" data-mask="(###) ###-####" value="(555) 382-9476"></td>
+		</tr>
+		<tr>
+			<td>SKU:</td>
+			<td><input type="text" data-mask="AAA ##-####"></td>
+		</tr>
+	</table>
+
+	<p>Copy some HTML text and paste: <em>ABC<strong>123</strong></em></p>
+
+	<fieldset>
+		<legend>Create a Custom Mask</legend>
+
+		<p>
+			<input type="text" id="newMask" value="AAA: ###-##-####">
+			<button type="button" onclick="addNewMask()">Create</button>
+		</p>
+
+		<strong>Legend:</strong>
+
+		<ul>
+			<li><code>A</code>: Alphabetic character, case insensitve</li>
+			<li><code>#</code>: Any number 0-9</li>
+		</ul>
+	</fieldset>
+
 	<script type="text/javascript" src="../src/InputMaskModule.js"></script>
 	<script type="text/javascript" src="../src/InputMaskModule/Grammar.js"></script>
 	<script type="text/javascript" src="../src/InputMaskModule/Template.js"></script>
 	<script type="text/javascript">
+
+		// Create and initialize the input mask module
 		var inputMasks = new InputMaskModule()
 			.init(document.documentElement);
+
+		function addNewMask() {
+			var input = document.getElementById("newMask"),
+			    mask = String(input.value).replace(/^\s+|\s+$/g, "");
+
+			if (mask) {
+				with(document.querySelector("table tbody")) // cuz I can!
+				with(insertRow(rows.length)) {
+					insertCell(cells.length).innerHTML = mask;
+					insertCell(cells.length).innerHTML =
+						'<input type="text" data-mask="' + mask + '"> ' +
+						'<button type="button" onclick="removeMask(this);">X</button>';
+				}
+			}
+			else {
+				alert("Please enter a mask");
+				input.focus();
+			}
+		}
+
+		function removeMask(button) {
+			var tr = button.parentNode.parentNode;
+			tr.parentNode.removeChild(tr);
+		}
 	</script>
 </body>
 </html>
