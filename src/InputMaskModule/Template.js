@@ -74,7 +74,7 @@ Template.prototype = {
 		if (actualStart < 0) {
 			selection.start = selection.end = start;
 		}
-		else if (this.isValidCharAt(newChar, actualStart)) {
+		else if (this._isValidCharAt(newChar, actualStart)) {
 			chars[actualStart] = newChar;
 			i = this._nextCharIndex(actualStart + 1, this.DIRECTION_FORWARDS, this.grammar.anyOrPlaceholder, chars);
 
@@ -129,33 +129,7 @@ Template.prototype = {
 		return emptyValue === value;
 	},
 
-	isNonFiller: function(c) {
-		return this.grammar.any.test(c);
-	},
-
-	isChar: function(c) {
-		return this.grammar.chars.test(c);
-	},
-
-	isDigit: function(c) {
-		return this.grammar.digits.test(c);
-	},
-
-	isFiller: function(c) {
-		return this.grammar.filler.test(c);
-	},
-
-	isPlaceholder: function(c) {
-		return this.grammar.placeholder === c;
-	},
-
-	isSameCharClass: function(a, b) {
-		return (a >= 0 && b < this.maskChars.length)
-		       ? this.maskChars[a] === this.maskChars[b]
-		       : false;
-	},
-
-	isValidCharAt: function(c, index) {
+	_isValidCharAt: function(c, index) {
 		if (index < 0 || index >= this.maskChars.length) {
 			return false;
 		}
