@@ -8,6 +8,7 @@ Grammar.prototype = {
 	digits: /[0-9]/,
 	chars: /[a-zA-Z]/,
 	any: /[a-zA-Z0-9]/,
+	anyOrPlaceholder: /[_a-zA-Z0-9]/,
 	placeholder: "_",
 	filler: /[^#A]/,
 	charMarker: "A",

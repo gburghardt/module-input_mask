@@ -47,28 +47,6 @@ InputMaskModule.prototype = {
 		this.element = this.document = this.window = null;
 	},
 
-	_addCharacter: function(element, newChar) {
-		var template = InputMaskModule.Template.getByElement(element),
-		    start = element.selectionStart,
-		    chars = element.value.split(""),
-		    c;
-
-		if (template.isValidCharAt(newChar, start)) {
-			chars[start] = newChar;
-
-			while (start < chars.length) {
-				c = chars[++start];
-
-				if (template.isNonFiller(c) || template.isPlaceholder(c)) {
-					break;
-				}
-			}
-
-			element.value = chars.join("");
-			element.setSelectionRange(start, start);
-		}
-	},
-
 	handleFocusIn: function(event) {
 		event = event || window.event;
 
@@ -96,17 +74,29 @@ InputMaskModule.prototype = {
 
 		var keyCode = event.keyCode,
 		    charCode = event.charCode,
-		    element = event.target;
+		    element = event.target,
+		    start = element.selectionStart,
+		    end = element.selectionEnd,
+		    value = element.value,
+		    template = InputMaskModule.Template.getByElement(element),
+		    selection = null;
 
-		if (keyCode === this.KEYCODE_BACKSPACE) {
-			this._removeCharacter(element, -1);
+		if (this.KEYCODE_BACKSPACE === keyCode) {
+			selection = (start === end)
+			          ? template.removePrevChar(start, value)
+			          : template.removeCharRange(start, end, value);
 		}
-		else if (keyCode === this.KEYCODE_DELETE) {
-			this._removeCharacter(element, 1);
+		else if (this.KEYCODE_DELETE === keyCode) {
+			selection = (start === end)
+			          ? template.removeNextChar(start, value)
+			          : template.removeCharRange(start, end, value);
 		}
 		else {
-			this._addCharacter(element, String.fromCharCode(charCode));
+			selection = template.addCharacter(start, String.fromCharCode(charCode), value);
 		}
+
+		element.value = selection.text;
+		element.setSelectionRange(selection.start, selection.end);
 	},
 
 	_hideMask: function(element) {
@@ -121,72 +111,6 @@ InputMaskModule.prototype = {
 		return element.getAttribute("data-mask") || element.getAttribute("data-mask-name") ? true : false;
 	},
 
-	_removeCharacter: function(element, offset) {
-		offset = offset > 0 ? 1 : -1;
-
-		var template = InputMaskModule.Template.getByElement(element);
-
-		if (template.isEmptyValue(element.value)) {
-			return;
-		}
-		else if (element.selectionStart === element.value.length && element.selectionEnd === element.value.length) {
-			return;
-		}
-
-		var start = element.selectionStart,
-		    removeStart = start,
-		    removeEnd = -1,
-		    newStart = start,
-		    chars = element.value.split(""),
-		    charCount = chars.length,
-		    c = chars[newStart],
-		    i;
-
-		if (offset > 0) {
-			// Find first removable char
-			for (i = start; i < charCount; i++) {
-				if (template.isNonFiller(chars[i])) {
-					removeStart = i;
-					break;
-				}
-			}
-
-			// from removeStart, shift characters in the same class to the LEFT until end of string or different char class
-			for (i = removeStart; i < charCount; i++) {
-				if (template.isNonFiller(chars[i]) &&
-					template.isSameCharClass(removeStart, i) &&
-					template.isNonFiller(chars[i + 1]) &&
-					template.isSameCharClass(removeStart, i + 1)
-				) {
-					chars[i] = chars[i + 1];
-					removeEnd = i + 1;
-				}
-			}
-
-			if (removeEnd > -1) {
-				chars[removeEnd] = template.getPlaceholder();
-			}
-
-			element.value = chars.join("");
-			element.setSelectionRange(removeStart, removeStart);
-		}
-
-		// while (newStart > 0 && newStart < charCount) {
-		// 	if (template.isNonFiller(c) || template.isPlaceholder(c)) {
-		// 		break;
-		// 	}
-
-		// 	newStart += offset;
-		// 	c = chars[newStart];
-		// }
-
-		// if (newStart > 0 && newStart < charCount) {
-		// 	chars[newStart] = template.getPlaceholder();
-		// 	element.value = chars.join("");
-		// 	element.setSelectionRange(newStart, newStart);
-		// }
-	},
-
 	setElement: function(element) {
 		this.element = typeof element === "string"
 		             ? document.getElementById(element)
@@ -199,10 +123,12 @@ InputMaskModule.prototype = {
 	},
 
 	_showMask: function(element) {
-		var template = InputMaskModule.Template.getByElement(element);
+		var template = InputMaskModule.Template.getByElement(element),
+		    index = -1;
 
 		element.value = template.getMaskedValue(element.value);
-		element.selectionStart = element.selectionEnd = element.value.indexOf(template.grammar.placeholder)
+		index = element.value.indexOf(template.getPlaceholder());
+		element.setSelectionRange(index, index);
 	}
 
 };

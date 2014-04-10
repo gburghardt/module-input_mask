@@ -64,6 +64,33 @@ Template.prototype = {
 
 	constructor: Template,
 
+	addCharacter: function(start, newChar, text) {
+		var chars = text.split(""),
+		    actualStart = this._nextCharIndex(start, this.DIRECTION_FORWARDS, this.grammar.anyOrPlaceholder, chars),
+		    i = actualStart,
+		    charCount = chars.length,
+		    selection = { text: text, start: actualStart, end: actualStart, length: 0 };
+
+		if (actualStart < 0) {
+			selection.start = selection.end = start;
+		}
+		else if (this.isValidCharAt(newChar, actualStart)) {
+			chars[actualStart] = newChar;
+			i = this._nextCharIndex(actualStart + 1, this.DIRECTION_FORWARDS, this.grammar.anyOrPlaceholder, chars);
+
+			if (i > -1) {
+				selection.text = chars.join("");
+				selection.start = selection.end = i;
+			}
+			else if (actualStart === charCount - 1) {
+				selection.text = chars.join("");
+				selection.start = selection.end = charCount;
+			}
+		}
+
+		return selection;
+	},
+
 	getMaskedValue: function(value) {
 		var maskChars = this.mask.split(""),
 		    valueChars = value.split(""),
@@ -163,14 +190,18 @@ Template.prototype = {
 	},
 
 	removeNextChar: function(start, text) {
-		return this.removeChars(start, 0, this.DIRECTION_FORWARDS, text);
+		return this._removeChars(start, 0, this.DIRECTION_FORWARDS, text);
 	},
 
 	removePrevChar: function(start, text) {
-		return this.removeChars(start, 0, this.DIRECTION_BACKWARDS, text);
+		return this._removeChars(start, 0, this.DIRECTION_BACKWARDS, text);
 	},
 
-	removeChars: function(start, count, direction, text) {
+	removeCharRange: function(start, end, text) {
+		return this._removeChars(start, end - start, this.DIRECTION_FORWARDS, text);
+	},
+
+	_removeChars: function(start, count, direction, text) {
 		start = (start < 0) ? 0 : start;
 		count = (count < 0) ? 0 : count;
 		direction = direction < 0 ? -1 : 1;

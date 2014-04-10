@@ -7,6 +7,74 @@ describe("InputMaskModule.Template", function() {
 		template = new InputMaskModule.Template(grammar);
 	});
 
+	describe("addCharacter", function() {
+
+		beforeEach(function() {
+			template.setMask("(###) ###-####");
+		});
+
+		it("adds a character to the first available slot when the cursor is on a filler characer", function() {
+			var text = "(___) ___-____",
+			    selection = template.addCharacter(0, "8", text);
+
+			expect(selection.text).toBe("(8__) ___-____");
+			expect(selection.start).toBe(2);
+			expect(selection.end).toBe(2);
+			expect(selection.length).toBe(0);
+		});
+
+		it("adds a character when at the first available placeholder", function() {
+			var text = "(___) ___-____",
+			    selection = template.addCharacter(1, "8", text);
+
+			expect(selection.text).toBe("(8__) ___-____");
+			expect(selection.start).toBe(2);
+			expect(selection.end).toBe(2);
+			expect(selection.length).toBe(0);
+		});
+
+		it("does nothing when the cursor is at the end", function() {
+			var text = "(123) 456-7890",
+			    selection = template.addCharacter(14, "8", text);
+
+			expect(selection.text).toBe(text);
+			expect(selection.start).toBe(14);
+			expect(selection.end).toBe(14);
+			expect(selection.length).toBe(0);
+		});
+
+		it("adds a character in a valid placeholder", function() {
+			var text = "(123) ___-____",
+			    selection = template.addCharacter(6, "4", text);
+
+			expect(selection.text).toBe("(123) 4__-____");
+			expect(selection.start).toBe(7);
+			expect(selection.end).toBe(7);
+			expect(selection.length).toBe(0);
+		});
+
+		it("does not add an invalid character and maintains the cursor position", function() {
+			var text = "(123) ___-____",
+			    selection = template.addCharacter(6, "l", text);
+
+			expect(selection.text).toBe("(123) ___-____");
+			expect(selection.start).toBe(6);
+			expect(selection.end).toBe(6);
+			expect(selection.length).toBe(0);
+		});
+
+		it("adds a character in the last position", function() {
+			var text = "(___) ___-____",
+			    selection = template.addCharacter(13, "8", text);
+
+			expect(selection.text).toBe("(___) ___-___8");
+			expect(selection.start).toBe(14);
+			expect(selection.end).toBe(14);
+			expect(selection.length).toBe(0);
+		});
+
+	});
+
 	describe("getMaskedValue", function() {
 
 		beforeEach(function() {
@@ -182,7 +250,7 @@ describe("InputMaskModule.Template", function() {
 
 	});
 
-	describe("removeChars", function() {
+	describe("_removeChars", function() {
 
 		describe("with homogenous types", function() {
 
@@ -192,7 +260,7 @@ describe("InputMaskModule.Template", function() {
 
 			all("default values remain unchanged", [ 0, 14, 1, 5, 6 ], function(start) {
 				var text = "(___) ___-____";
-				var selection = template.removeChars(start, 1, template.DIRECTION_FORWARDS, text);
+				var selection = template._removeChars(start, 1, template.DIRECTION_FORWARDS, text);
 
 				expect(selection.text).toBe("(___) ___-____");
 				expect(selection.start).toBe(start);
@@ -202,7 +270,7 @@ describe("InputMaskModule.Template", function() {
 
 			it("shifts one character to the left when the cursor is at the beginning", function() {
 				var text = "(123) 456-7890";
-				var selection = template.removeChars(0, 0, template.DIRECTION_FORWARDS, text);
+				var selection = template._removeChars(0, 0, template.DIRECTION_FORWARDS, text);
 
 				expect(selection.text).toBe("(234) 567-890_");
 				expect(selection.start).toBe(1);
@@ -212,12 +280,12 @@ describe("InputMaskModule.Template", function() {
 
 			it("backspaces the last character when the cursor is at the end", function() {
 				var text = "(123) 456-7890";
-				var selection = template.removeChars(10, 0, template.DIRECTION_BACKWARDS, text);
+				var selection = template._removeChars(10, 0, template.DIRECTION_BACKWARDS, text);
 			});
 
 			it("does nothing if the cursor is at the end", function() {
 				var text = "(123) 456-7890";
-				var selection = template.removeChars(14, 0, template.DIRECTION_FORWARDS, text);
+				var selection = template._removeChars(14, 0, template.DIRECTION_FORWARDS, text);
 
 				expect(selection.text).toBe("(123) 456-7890");
 				expect(selection.start).toBe(14);
@@ -227,7 +295,7 @@ describe("InputMaskModule.Template", function() {
 
 			it("deletes a character when the cursor is on the last non filler character", function() {
 				var text = "(123) 456-7890";
-				var selection = template.removeChars(13, 0, template.DIRECTION_FORWARDS, text);
+				var selection = template._removeChars(13, 0, template.DIRECTION_FORWARDS, text);
 
 				expect(selection.text).toBe("(123) 456-789_");
 				expect(selection.start).toBe(13);
@@ -237,7 +305,7 @@ describe("InputMaskModule.Template", function() {
 
 			it("shifts one character to the left when the cursor is at a filler character", function() {
 				var text = "(123) 4__-____";
-				var selection = template.removeChars(4, 0, template.DIRECTION_FORWARDS, text);
+				var selection = template._removeChars(4, 0, template.DIRECTION_FORWARDS, text);
 
 				expect(selection.text).toBe("(123) ___-____");
 				expect(selection.start).toBe(6);
@@ -247,7 +315,7 @@ describe("InputMaskModule.Template", function() {
 
 			it("shifts one character to the left", function() {
 				var text = "(123) 4__-____";
-				var selection = template.removeChars(2, 0, template.DIRECTION_FORWARDS, text);
+				var selection = template._removeChars(2, 0, template.DIRECTION_FORWARDS, text);
 
 				expect(selection.text).toBe("(134) ___-____");
 				expect(selection.start).toBe(2);
@@ -258,7 +326,7 @@ describe("InputMaskModule.Template", function() {
 			it("removes multiple characters", function() {
 				//           __
 				var text = "(123) 4__-____";
-				var selection = template.removeChars(1, 2, template.DIRECTION_FORWARDS, text);
+				var selection = template._removeChars(1, 2, template.DIRECTION_FORWARDS, text);
 
 				expect(selection.text).toBe("(__3) 4__-____");
 				expect(selection.start).toBe(1);
@@ -277,7 +345,7 @@ describe("InputMaskModule.Template", function() {
 			it("removes characters from multiple types", function() {
 				//           ____
 				var text = "123-CDH";
-				var selection = template.removeChars(1, 4, template.DIRECTION_FORWARDS, text);
+				var selection = template._removeChars(1, 4, template.DIRECTION_FORWARDS, text);
 
 				expect(selection.text).toBe("1__-_DH");
 				expect(selection.start).toBe(1);
