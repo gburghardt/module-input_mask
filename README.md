@@ -128,3 +128,17 @@ automatically. Just add a `data-modules` attribute to the `html` tag:
     </html>
 
 The Foundry framework does the rest for you.
+
+### Developing and Contributing to InputMask
+
+1. Install [NodeJS](http://nodejs.org/)
+2. Install [Bower](http://bower.io/)
+3. Fork https://github.com/gburghardt/input_mask_module.git and clone it
+4. From the home directory for input_mask_module:
+        cd path/to/input_mask_module
+        npm install
+        bower install
+5. Create a new branch for your feature or bug fix
+6. Edit and commit files **(Do not run `grunt`)**
+7. Push your commits.
+8. Submit a pull request via GitHub
