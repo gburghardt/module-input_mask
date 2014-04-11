@@ -1,10 +1,10 @@
-describe("InputMaskModule.Template", function() {
+describe("InputMask.Template", function() {
 
 	var grammar, template;
 
 	beforeEach(function() {
-		grammar = new InputMaskModule.Grammar();
-		template = new InputMaskModule.Template(grammar);
+		grammar = new InputMask.Grammar();
+		template = new InputMask.Template(grammar);
 	});
 
 	describe("addCharacter", function() {

@@ -1,9 +1,9 @@
-describe("InputMaskModule.Grammar", function() {
+describe("InputMask.Grammar", function() {
 
 	var grammar;
 
 	beforeEach(function() {
-		grammar = new InputMaskModule.Grammar();
+		grammar = new InputMask.Grammar();
 	});
 
 	describe("compile", function() {

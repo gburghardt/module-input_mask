@@ -1,4 +1,4 @@
-function InputMaskModule() {
+InputMask.Module = function Module() {
 	this.options = {};
 	this.handleFocusIn = this.handleFocusIn.bind(this);
 	this.handleFocusOut = this.handleFocusOut.bind(this);
@@ -6,9 +6,9 @@ function InputMaskModule() {
 	this.handleKeyPress = this.handleKeyPress.bind(this);
 	this.handleKeyUp = this.handleKeyUp.bind(this);
 	this.handlePaste = this.handlePaste.bind(this);
-}
+};
 
-InputMaskModule.prototype = {
+InputMask.Module.prototype = {
 
 	KEYCODE_BACKSPACE: 8,
 	KEYCODE_CONTROL: 17,
@@ -26,7 +26,7 @@ InputMaskModule.prototype = {
 
 	window: null,
 
-	constructor: InputMaskModule,
+	constructor: InputMask.Module,
 
 	init: function(element) {
 		if (element) {
@@ -61,7 +61,7 @@ InputMaskModule.prototype = {
 	},
 
 	_getTemplate: function(element) {
-		return InputMaskModule.Template.getByElement(element);
+		return InputMask.Module.Template.getByElement(element);
 	},
 
 	handleFocusIn: function(event) {

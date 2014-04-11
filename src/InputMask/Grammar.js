@@ -1,4 +1,4 @@
-(function(InputMaskModule) {
+(function(InputMask) {
 
 function Grammar() {
 }
@@ -40,6 +40,6 @@ Grammar.prototype = {
 
 };
 
-InputMaskModule.Grammar = Grammar;
+InputMask.Grammar = Grammar;
 
-})(InputMaskModule);
+})(InputMask);

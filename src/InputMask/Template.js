@@ -1,4 +1,4 @@
-(function(InputMaskModule) {
+(function(InputMask) {
 
 var _id = 0,
     _templates = {};
@@ -13,7 +13,7 @@ function Template(grammar, mask, name) {
 	this.name = name || String(++_id);
 }
 
-Template.defaultGrammar = new InputMaskModule.Grammar();
+Template.defaultGrammar = new InputMask.Module.Grammar();
 
 Template.getByElement = function(element) {
 	var name = element.getAttribute("data-mask-name"),
@@ -24,7 +24,7 @@ Template.getByElement = function(element) {
 			return _templates[name];
 		}
 		else {
-			throw new Error("No instance of InputMaskModule.Template found for name: " + name);
+			throw new Error("No instance of InputMask.Module.Template found for name: " + name);
 		}
 	}
 	else if (mask) {
@@ -314,8 +314,6 @@ Template.prototype = {
 
 };
 
-InputMaskModule.Template = Template;
-
 function Selection(start, end, text) {
 	if (typeof start === "number") {
 		this.setRange(start, end);
@@ -347,4 +345,7 @@ Selection.prototype = {
 	}
 };
 
-})(InputMaskModule);
+InputMask.Selection = Selection;
+InputMask.Template = Template;
+
+})(InputMask;

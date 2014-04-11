@@ -12,9 +12,10 @@
 #
 src_files:
   - bower_components/jasmine-data_driven_tests/src/all.js
-  - src/InputMaskModule.js
-  - src/InputMaskModule/Grammar.js
-  - src/InputMaskModule/Template.js
+  - src/InputMask.js
+  - src/InputMask/Module.js
+  - src/InputMask/Grammar.js
+  - src/InputMask/Template.js
 
 # stylesheets
 #
