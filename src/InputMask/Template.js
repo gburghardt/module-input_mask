@@ -24,7 +24,7 @@ Template.getByElement = function(element) {
 			return _templates[name];
 		}
 		else {
-			throw new Error("No instance of InputMask.Module.Template found for name: " + name);
+			throw new Error("No instance of InputMask.Template found for name: " + name);
 		}
 	}
 	else if (mask) {

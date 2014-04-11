@@ -61,7 +61,7 @@ InputMask.Module.prototype = {
 	},
 
 	_getTemplate: function(element) {
-		return InputMask.Module.Template.getByElement(element);
+		return InputMask.Template.getByElement(element);
 	},
 
 	handleFocusIn: function(event) {
