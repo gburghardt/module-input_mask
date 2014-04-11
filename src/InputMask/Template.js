@@ -13,7 +13,7 @@ function Template(grammar, mask, name) {
 	this.name = name || String(++_id);
 }
 
-Template.defaultGrammar = new InputMask.Module.Grammar();
+Template.defaultGrammar = new InputMask.Grammar();
 
 Template.getByElement = function(element) {
 	var name = element.getAttribute("data-mask-name"),
