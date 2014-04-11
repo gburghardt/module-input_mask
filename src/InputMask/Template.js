@@ -348,4 +348,4 @@ Selection.prototype = {
 InputMask.Selection = Selection;
 InputMask.Template = Template;
 
-})(InputMask;
+})(InputMask);
