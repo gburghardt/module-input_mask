@@ -1,103 +1,85 @@
 InputMask.Module = function Module() {
-	this.options = {};
-	this.handleFocusIn = this.handleFocusIn.bind(this);
-	this.handleFocusOut = this.handleFocusOut.bind(this);
-	this.handleKeyDown = this.handleKeyDown.bind(this);
-	this.handleKeyPress = this.handleKeyPress.bind(this);
-	this.handleKeyUp = this.handleKeyUp.bind(this);
-	this.handlePaste = this.handlePaste.bind(this);
-};
 
-InputMask.Module.prototype = {
+	var KEYCODE_BACKSPACE = 8,
+	    KEYCODE_CONTROL = 17,
+	    KEYCODE_DELETE = 46;
 
-	KEYCODE_BACKSPACE: 8,
-	KEYCODE_CONTROL: 17,
-	KEYCODE_DELETE: 46,
+	var self = this,
+	    _filteredKeys = [9, 13, 35, 36, 37, 38, 39, 40],
+	    _controlKeyDown = false,
+	    _element,
+	    _document,
+	    _window;
 
-	_controlKeyDown: false,
-
-	document: null,
-
-	element: null,
-
-	_filteredKeys: [9, 13, 35, 36, 37, 38, 39, 40],
-
-	options: null,
-
-	window: null,
-
-	constructor: InputMask.Module,
-
-	init: function(element) {
+	function init(element) {
 		if (element) {
-			this.setElement(element);
+			setElement(element);
 		}
 
-		this.element.addEventListener("focus", this.handleFocusIn, true);
-		this.element.addEventListener("blur", this.handleFocusOut, true);
-		this.element.addEventListener("keydown", this.handleKeyDown, false);
-		this.element.addEventListener("keypress", this.handleKeyPress, false);
-		this.element.addEventListener("keyup", this.handleKeyUp, false);
-		this.element.addEventListener("paste", this.handlePaste, false);
+		_element.addEventListener("focus", handleFocusIn, true);
+		_element.addEventListener("blur", handleFocusOut, true);
+		_element.addEventListener("keydown", handleKeyDown, false);
+		_element.addEventListener("keypress", handleKeyPress, false);
+		_element.addEventListener("keyup", handleKeyUp, false);
+		_element.addEventListener("paste", handlePaste, false);
 
-		return this;
-	},
+		return self;
+	}
 
-	destructor: function() {
-		if (this.element) {
-			this.element.removeEventListener("focus", this.handleFocusIn, true);
-			this.element.removeEventListener("blur", this.handleFocusOut, true);
-			this.element.removeEventListener("keydown", this.handleKeyDown, false);
-			this.element.removeEventListener("keypress", this.handleKeyPress, false);
-			this.element.removeEventListener("keyup", this.handleKeyUp, false);
-			this.element.removeEventListener("paste", this.handlePaste, false);
+	function destructor() {
+		if (_element) {
+			_element.removeEventListener("focus", handleFocusIn, true);
+			_element.removeEventListener("blur", handleFocusOut, true);
+			_element.removeEventListener("keydown", handleKeyDown, false);
+			_element.removeEventListener("keypress", handleKeyPress, false);
+			_element.removeEventListener("keyup", handleKeyUp, false);
+			_element.removeEventListener("paste", handlePaste, false);
 		}
 
-		this.element = this.document = this.window = null;
-	},
+		_element = _document = _window = null;
+	}
 
-	_getTemplate: function(element) {
+	function getTemplate(element) {
 		return InputMask.getTemplateByElement(element);
-	},
+	}
 
-	handleFocusIn: function(event) {
-		console.log("handleFocusIn");
+	function handleFocusIn(event) {
 		event = event || window.event;
 
-		if (this._isMaskable(event.target)) {
-			this._showMask(event.target);
+		if (isMaskable(event.target)) {
+			showMask(event.target);
 		}
-	},
+	}
 
-	handleFocusOut: function(event) {
+	function handleFocusOut(event) {
 		event = event || window.event;
 
-		if (this._isMaskable(event.target)) {
-			this._hideMask(event.target);
+		if (isMaskable(event.target)) {
+			hideMask(event.target);
 		}
-	},
+	}
 
-	handleKeyDown: function(event) {
+	function handleKeyDown(event) {
 		event = event || window.event;
 
-		if (event.keyCode === this.KEYCODE_CONTROL) {
-			this._controlKeyDown = true;
+		if (event.keyCode === KEYCODE_CONTROL) {
+			_controlKeyDown = true;
 		}
-		else if (this._isMaskable(event.target)) {
+		else if (isMaskable(event.target)) {
 			var keyCode = event.keyCode,
 			    element = event.target,
 			    start = element.selectionStart,
 			    end = element.selectionEnd,
 			    value = element.value,
-		        template = this._getTemplate(element),
+		        template = getTemplate(element),
 			    selection = null;
 
-			if (this.KEYCODE_BACKSPACE === keyCode) {
+			if (KEYCODE_BACKSPACE === keyCode) {
 				selection = (start === end)
 				          ? template.removePrevChar(start, value)
 				          : template.removeCharRange(start, end, value);
 			}
-			else if (this.KEYCODE_DELETE === keyCode) {
+			else if (KEYCODE_DELETE === keyCode) {
 				selection = (start === end)
 				          ? template.removeNextChar(start, value)
 				          : template.removeCharRange(start, end, value);
@@ -109,14 +91,14 @@ InputMask.Module.prototype = {
 				element.setSelectionRange(selection.start, selection.end);
 			}
 		}
-	},
+	}
 
-	handleKeyPress: function(event) {
+	function handleKeyPress(event) {
 		event = event || window.event;
 
-		if (!this._isMaskable(event.target)
-			|| this._filteredKeys.indexOf(event.keyCode) > -1
-			|| this._controlKeyDown) {
+		if (!isMaskable(event.target)
+			|| _filteredKeys.indexOf(event.keyCode) > -1
+			|| _controlKeyDown) {
 			return;
 		}
 
@@ -126,7 +108,7 @@ InputMask.Module.prototype = {
 		    element = event.target,
 		    start = element.selectionStart,
 		    value = element.value,
-		    template = this._getTemplate(element),
+		    template = getTemplate(element),
 		    selection = null;
 
 		if (charCode > 0) {
@@ -134,46 +116,33 @@ InputMask.Module.prototype = {
 			element.value = selection.text;
 			element.setSelectionRange(selection.start, selection.end);
 		}
-	},
+	}
 
-	handleKeyUp: function(event) {
-		if ((event || window.event).keyCode === this.KEYCODE_CONTROL) {
-			this._controlKeyDown = false;
+	function handleKeyUp(event) {
+		if ((event || window.event).keyCode === KEYCODE_CONTROL) {
+			_controlKeyDown = false;
 		}
-	},
+	}
 
-	handlePaste: function(event) {
+	function handlePaste(event) {
 		event = event || window.event;
 
-		if (!this._isMaskable(event.target)) {
+		if (!isMaskable(event.target)) {
 			return;
 		}
 
 		var clipboard = event.clipboardData || null,
 		    element = event.target,
-		    self = this,
 		    template, selection;
 
-		if (!clipboard) {
-			waitForPaste(element);
-		}
-		else {
-			// Chrome: clipboard.types is an Array
-			// Firefox: clipboard.types is a different class
-			if (Array.prototype.indexOf.call(clipboard.types, "text/plain") > -1) {
-				event.preventDefault();
-				processPaste(clipboard.getData("text/plain"));
-			}
-		}
-
-		function processPaste(pastedText) {
-			template = self._getTemplate(element);
+		var processPaste = function(pastedText) {
+			template = getTemplate(element);
 			selection = template.addCharacters(element.selectionStart, pastedText, element.value);
 			element.value = selection.text;
 			element.setSelectionRange(selection.start, selection.end);
-		}
+		};
 
-		function waitForPaste(element) {
+		var waitForPaste = function(element) {
 			var start = element.selectionStart,
 			    end = element.selectionEnd,
 			    value = element.value,
@@ -200,33 +169,45 @@ InputMask.Module.prototype = {
 			element.value = "";
 
 			detectPaste();
-		}
-	},
+		};
 
-	_hideMask: function(element) {
-		if (this._getTemplate(element).isEmptyValue(element.value)) {
+		if (!clipboard) {
+			waitForPaste(element);
+		}
+		else {
+			// Chrome: clipboard.types is an Array
+			// Firefox: clipboard.types is a different class
+			if (Array.prototype.indexOf.call(clipboard.types, "text/plain") > -1) {
+				event.preventDefault();
+				processPaste(clipboard.getData("text/plain"));
+			}
+		}
+	}
+
+	function hideMask(element) {
+		if (getTemplate(element).isEmptyValue(element.value)) {
 			element.value = "";
 		}
-	},
+	}
 
-	_isMaskable: function(element) {
+	function isMaskable(element) {
 		return (element.getAttribute("data-mask") || element.getAttribute("data-mask-name"))
 			&& !element.getAttribute("data-mask-disabled") && !InputMask.disabled ? true : false;
-	},
+	}
 
-	setElement: function(element) {
-		this.element = typeof element === "string"
-		             ? document.getElementById(element)
-		             : element;
-		this.document = this.element.ownerDocument;
-		this.window = this.document.defaultView;
-	},
+	function setElement(element) {
+		_element = typeof element === "string"
+		         ? document.getElementById(element)
+		         : element;
+		_document = _element.ownerDocument;
+		_window = _document.defaultView;
+	}
 
-	setOptions: function(options) {
-	},
+	function setOptions(options) {
+	}
 
-	_showMask: function(element) {
-		var template = this._getTemplate(element),
+	function showMask(element) {
+		var template = getTemplate(element),
 		    index = -1;
 
 		element.value = template.getMaskedValue(element.value);
@@ -241,4 +222,15 @@ InputMask.Module.prototype = {
 		}
 	}
 
-};
+	// Public interface
+	this.init = init;
+	this.destructor = destructor;
+	this.setElement = setElement;
+	this.setOptions = setOptions;
+
+	// "Private" interface
+	this._getTemplate = getTemplate;
+	this._hideMask = hideMask;
+	this._isMaskable = isMaskable;
+	this._showMask = showMask;
+}

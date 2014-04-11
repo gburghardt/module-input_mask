@@ -1,4 +1,4 @@
-/*! input_mask_module 2014-04-11 */
+/*! input_mask_module 2014-04-14 */
 var InputMask = {
 
 	disabled: false,
@@ -83,14 +83,289 @@ InputMask.Grammar = Grammar;
 var _id = 0,
     _templates = {};
 
-function Template(grammar, mask, name) {
-	this.grammar = grammar || null;
+function Template() {
 
-	if (mask) {
-		this.setMask(mask);
+	var DIRECTION_BACKWARDS = -1,
+	    DIRECTION_FORWARDS = 1;
+
+	var _emptyValue,
+	    _grammar,
+	    _mask,
+	    _maskChars,
+	    _name;
+
+	function initialize(grammar, mask, name) {
+		_grammar = grammar || null;
+
+		if (mask) {
+			setMask(mask);
+		}
+
+		_name = name || String(++_id);
 	}
 
-	this.name = name || String(++_id);
+	function addCharacter(start, newChar, text) {
+		var chars = text.split(""),
+		    type = _grammar.anyOrPlaceholder,
+		    actualStart = nextCharIndex(start, DIRECTION_FORWARDS, type, chars),
+		    i = actualStart,
+		    charCount = chars.length,
+		    selection = new Selection(actualStart, actualStart, text);
+
+		if (actualStart < 0) {
+			selection.setRange(start);
+		}
+		else if (isValidCharAt(newChar, actualStart)) {
+			chars[actualStart] = newChar;
+			i = nextCharIndex(actualStart + 1, DIRECTION_FORWARDS, type, chars);
+
+			if (i > -1) {
+				selection.text = chars.join("");
+				selection.setRange(i);
+			}
+			else if (actualStart === charCount - 1) {
+				selection.text = chars.join("");
+				selection.setRange(charCount);
+			}
+		}
+
+		return selection;
+	}
+
+	function addCharacters(start, newChars, text) {
+		var i = 0,
+		    chars = text.split(""),
+		    type = _grammar.anyOrPlaceholder,
+		    index, selection, c;
+
+		if (start >= chars.length) {
+			selection = new Selection(start, start, text);
+		}
+		else {
+			index = nextCharIndex(start, DIRECTION_FORWARDS, type, chars);
+			selection = new Selection(index, index);
+
+			while (c = newChars.charAt(i++)) {
+				if (isValidCharAt(c, index)) {
+					chars[index] = c;
+					index = nextCharIndex(index + 1, DIRECTION_FORWARDS, type, chars);
+					selection.setRange((index > -1) ? index : chars.length);
+				}
+			}
+
+			selection.text = chars.join("");
+		}
+
+		return selection;
+	}
+
+	function getEmptyValue() {
+		var c, i = 0, chars = [];
+
+		while (c = _mask.charAt(i++)) {
+			if (c === _grammar.digitMarker || c === _grammar.charMarker) {
+				chars.push(_grammar.placeholder);
+			}
+			else {
+				chars.push(c);
+			}
+		}
+
+		return chars.join("");
+	}
+
+	function getMaskedValue(value) {
+		return addCharacters(0, value, _emptyValue).text;
+	}
+
+	function getPlaceholder() {
+		return _grammar.placeholder;
+	}
+
+	function isEmptyValue(value) {
+		var emptyValue = _mask.replace(new RegExp("[" + _grammar.digitMarker + _grammar.charMarker + "]+", "g"),
+			_grammar.placeholder);
+
+		return emptyValue === value;
+	}
+
+	function isValidCharAt(c, index) {
+		if (index < 0 || index >= _maskChars.length) {
+			return false;
+		}
+		else {
+			return _maskChars[index].test(c);
+		}
+	}
+
+	function nextCharIndex(start, direction, type, chars) {
+		var index = -1,
+		    i = start,
+		    length = chars.length;
+
+		if (direction === 1) {
+			for (i; i < length; i++) {
+				if (type.test(chars[i])) {
+					index = i;
+					break;
+				}
+			}
+		}
+		else {
+			while (i--) {
+				if (type.test(chars[i])) {
+					index = i;
+					break;
+				}
+			}
+		}
+
+		return index;
+	}
+
+	function removeNextChar(start, text) {
+		return removeChars(start, 0, DIRECTION_FORWARDS, text);
+	}
+
+	function removePrevChar(start, text) {
+		return removeChars(start, 0, DIRECTION_BACKWARDS, text);
+	}
+
+	function removeCharRange(start, end, text) {
+		return removeChars(start, end - start, DIRECTION_FORWARDS, text);
+	}
+
+	function removeChars(start, count, direction, text) {
+		start = (start < 0) ? 0 : start;
+		count = (count < 0) ? 0 : count;
+		direction = direction < 0 ? -1 : 1;
+
+		var selection = new Selection(start, start),
+		    chars = text.split("");
+
+		if (count === 0) {
+			shiftCharacters(selection, start, direction, chars);
+		}
+		else {
+			removeCharacterRange(selection, start, count, chars);
+		}
+
+		selection.text = chars.join("");
+
+		return selection;
+	}
+
+	function removeCharacterRange(selection, start, count, chars) {
+		var actualStart = nextCharIndex(start, 1, _grammar.any, chars),
+		    i = actualStart,
+		    charCount = chars.length,
+		    length = (i + count > charCount)
+		           ? charCount
+		           : i + count,
+		    type = _grammar.any;
+
+		if (i < 0 || i >= charCount - 1) {
+			return;
+		}
+
+		for (i; i < length; i++) {
+			if (type.test(chars[i])) {
+				chars[i] = _grammar.placeholder;
+			}
+		}
+
+		selection.start = selection.end = actualStart;
+	}
+
+	function shiftCharacters(selection, start, direction, chars) {
+		var count = 1,
+		    actualStart = nextCharIndex(start, direction, _grammar.any, chars),
+		    i = actualStart,
+		    type = _maskChars[i],
+		    shiftIndex = -1,
+		    charCount = chars.length;
+
+		if (i < 0 || i >= charCount) {
+			return;
+		}
+
+		for (i; i < charCount; i++) {
+			if (type.test(chars[i])) {
+				shiftIndex = (shiftIndex === -1)
+				           ? nextCharIndex(i + count, DIRECTION_FORWARDS, type, chars)
+				           : nextCharIndex(shiftIndex + 1, DIRECTION_FORWARDS, type, chars);
+
+				if (shiftIndex > -1 && shiftIndex < charCount && type.test(chars[shiftIndex])) {
+					chars[i] = chars[shiftIndex];
+				}
+				else {
+					chars[i] = _grammar.placeholder;
+				}
+			}
+		}
+
+		selection.start = selection.end = actualStart;
+	}
+
+	function setMask(mask) {
+		if (!_grammar) {
+			throw new Error("Cannot set mask without a grammar object");
+		}
+
+		_mask = mask;
+		_maskChars = _grammar.compile(mask);
+		_emptyValue = getEmptyValue();
+	}
+
+	function test(value) {
+		var chars = value.split(""),
+		    i = 0,
+		    length = chars.length,
+		    valid = true,
+		    totalMaskChars = _maskChars.length,
+		    c;
+
+		if (length != totalMaskChars) {
+			valid = false;
+		}
+		else {
+			for (i; i < length; i++) {
+				c = chars[i];
+
+				if (c === _grammar.placeholder) {
+					continue;
+				}
+				else if (i >= totalMaskChars || !_maskChars[i].test(c)) {
+					valid = false;
+					break;
+				}
+			}
+		}
+
+		return valid;
+	}
+
+	// Public interface
+	this.addCharacter = addCharacter;
+	this.addCharacters = addCharacters;
+	this.getEmptyValue = getEmptyValue;
+	this.getMaskedValue = getMaskedValue;
+	this.getPlaceholder = getPlaceholder;
+	this.isEmptyValue = isEmptyValue;
+	this.removeNextChar = removeNextChar;
+	this.removePrevChar = removePrevChar;
+	this.removeCharRange = removeCharRange;
+	this.setMask = setMask;
+	this.test = test;
+
+	// "Private" interface
+	this._isValidCharAt = isValidCharAt;
+	this._nextCharIndex = nextCharIndex;
+	this._removeChars = removeChars;
+	this._removeCharacterRange = removeCharacterRange;
+	this._shiftCharacters = shiftCharacters;
+
+	initialize.apply(this, arguments);
 }
 
 Template.defaultGrammar = (InputMask.Grammar) ? new InputMask.Grammar() : null;
@@ -127,267 +402,6 @@ Template.register = function(name, mask) {
 	_templates[name] = new Template(Template.defaultGrammar, mask, name);
 
 	return _templates[name];
-};
-
-Template.prototype = {
-
-	DIRECTION_BACKWARDS: -1,
-	DIRECTION_FORWARDS: 1,
-
-	emptyValue: null,
-
-	grammar: null,
-
-	mask: "",
-
-	maskChars: null,
-
-	name: null,
-
-	constructor: Template,
-
-	addCharacter: function(start, newChar, text) {
-		var chars = text.split(""),
-		    type = this.grammar.anyOrPlaceholder,
-		    actualStart = this._nextCharIndex(start, this.DIRECTION_FORWARDS, type, chars),
-		    i = actualStart,
-		    charCount = chars.length,
-		    selection = new Selection(actualStart, actualStart, text);
-
-		if (actualStart < 0) {
-			selection.setRange(start);
-		}
-		else if (this._isValidCharAt(newChar, actualStart)) {
-			chars[actualStart] = newChar;
-			i = this._nextCharIndex(actualStart + 1, this.DIRECTION_FORWARDS, type, chars);
-
-			if (i > -1) {
-				selection.text = chars.join("");
-				selection.setRange(i);
-			}
-			else if (actualStart === charCount - 1) {
-				selection.text = chars.join("");
-				selection.setRange(charCount);
-			}
-		}
-
-		return selection;
-	},
-
-	addCharacters: function(start, newChars, text) {
-		var i = 0,
-		    chars = text.split(""),
-		    type = this.grammar.anyOrPlaceholder,
-		    index, selection, c;
-
-		if (start >= chars.length) {
-			selection = new Selection(start, start, text);
-		}
-		else {
-			index = this._nextCharIndex(start, this.DIRECTION_FORWARDS, type, chars);
-			selection = new Selection(index, index);
-
-			while (c = newChars.charAt(i++)) {
-				if (this._isValidCharAt(c, index)) {
-					chars[index] = c;
-					index = this._nextCharIndex(index + 1, this.DIRECTION_FORWARDS, type, chars);;
-					selection.setRange((index > -1) ? index : chars.length);
-				}
-			}
-
-			selection.text = chars.join("");
-		}
-
-		return selection;
-	},
-
-	getEmptyValue: function() {
-		var c, i = 0, chars = [];
-
-		while (c = this.mask.charAt(i++)) {
-			if (c === this.grammar.digitMarker || c === this.grammar.charMarker) {
-				chars.push(this.grammar.placeholder);
-			}
-			else {
-				chars.push(c);
-			}
-		}
-
-		return chars.join("");
-	},
-
-	getMaskedValue: function(value) {
-		return this.addCharacters(0, value, this.emptyValue).text;
-	},
-
-	getPlaceholder: function() {
-		return this.grammar.placeholder;
-	},
-
-	isEmptyValue: function(value) {
-		var emptyValue = this.mask
-			.replace(new RegExp(this.grammar.digitMarker, "g"), this.grammar.placeholder)
-			.replace(new RegExp(this.grammar.charMarker, "g"), this.grammar.placeholder);
-
-		return emptyValue === value;
-	},
-
-	_isValidCharAt: function(c, index) {
-		if (index < 0 || index >= this.maskChars.length) {
-			return false;
-		}
-		else {
-			return this.maskChars[index].test(c);
-		}
-	},
-
-	_nextCharIndex: function(start, direction, type, chars) {
-		var index = -1,
-		    i = start,
-		    length = chars.length;
-
-		if (direction === 1) {
-			for (i; i < length; i++) {
-				if (type.test(chars[i])) {
-					index = i;
-					break;
-				}
-			}
-		}
-		else {
-			while (i--) {
-				if (type.test(chars[i])) {
-					index = i;
-					break;
-				}
-			}
-		}
-
-		return index;
-	},
-
-	removeNextChar: function(start, text) {
-		return this._removeChars(start, 0, this.DIRECTION_FORWARDS, text);
-	},
-
-	removePrevChar: function(start, text) {
-		return this._removeChars(start, 0, this.DIRECTION_BACKWARDS, text);
-	},
-
-	removeCharRange: function(start, end, text) {
-		return this._removeChars(start, end - start, this.DIRECTION_FORWARDS, text);
-	},
-
-	_removeChars: function(start, count, direction, text) {
-		start = (start < 0) ? 0 : start;
-		count = (count < 0) ? 0 : count;
-		direction = direction < 0 ? -1 : 1;
-
-		var selection = new Selection(start, start),
-		    chars = text.split("");
-
-		if (count === 0) {
-			this._shiftCharacters(selection, start, direction, chars);
-		}
-		else {
-			this._removeCharacterRange(selection, start, count, chars);
-		}
-
-		selection.text = chars.join("");
-
-		return selection;
-	},
-
-	_removeCharacterRange: function(selection, start, count, chars) {
-		var actualStart = this._nextCharIndex(start, 1, this.grammar.any, chars),
-		    i = actualStart,
-		    charCount = chars.length,
-		    length = (i + count > charCount)
-		           ? charCount
-		           : i + count,
-		    type = this.grammar.any;
-
-		if (i < 0 || i >= charCount - 1) {
-			return;
-		}
-
-		for (i; i < length; i++) {
-			if (type.test(chars[i])) {
-				chars[i] = this.grammar.placeholder;
-			}
-		}
-
-		selection.start = selection.end = actualStart;
-	},
-
-	_shiftCharacters: function(selection, start, direction, chars) {
-		var count = 1,
-		    actualStart = this._nextCharIndex(start, direction, this.grammar.any, chars),
-		    i = actualStart,
-		    type = this.maskChars[i],
-		    shiftIndex = -1,
-		    charCount = chars.length;
-
-		if (i < 0 || i >= charCount) {
-			return;
-		}
-
-		for (i; i < charCount; i++) {
-			if (type.test(chars[i])) {
-				shiftIndex = (shiftIndex === -1)
-				           ? this._nextCharIndex(i + count, this.DIRECTION_FORWARDS, type, chars)
-				           : this._nextCharIndex(shiftIndex + 1, this.DIRECTION_FORWARDS, type, chars);
-
-				if (shiftIndex > -1 && shiftIndex < charCount && type.test(chars[shiftIndex])) {
-					chars[i] = chars[shiftIndex];
-				}
-				else {
-					chars[i] = this.grammar.placeholder;
-				}
-			}
-		}
-
-		selection.start = selection.end = actualStart;
-	},
-
-	setMask: function(mask) {
-		if (!this.grammar) {
-			throw new Error("Cannot set mask without a grammar object");
-		}
-
-		this.mask = mask;
-		this.maskChars = this.grammar.compile(mask);
-		this.emptyValue = this.getEmptyValue();
-	},
-
-	test: function(value) {
-		var chars = value.split(""),
-		    i = 0,
-		    length = chars.length,
-		    valid = true,
-		    totalMaskChars = this.maskChars.length,
-		    c;
-
-		if (length != totalMaskChars) {
-			valid = false;
-		}
-		else {
-			for (i; i < length; i++) {
-				c = chars[i];
-
-				if (c === this.grammar.placeholder) {
-					continue;
-				}
-				else if (i >= totalMaskChars || !this.maskChars[i].test(c)) {
-					valid = false;
-					break;
-				}
-			}
-		}
-
-		return valid;
-	}
-
 };
 
 function Selection(start, end, text) {
@@ -427,182 +441,215 @@ InputMask.Template = Template;
 })(InputMask);
 
 InputMask.Module = function Module() {
-	this.options = {};
-	this.handleFocusIn = this.handleFocusIn.bind(this);
-	this.handleFocusOut = this.handleFocusOut.bind(this);
-	this.handleKeyDown = this.handleKeyDown.bind(this);
-	this.handleKeyPress = this.handleKeyPress.bind(this);
-	this.handleKeyUp = this.handleKeyUp.bind(this);
-	this.handlePaste = this.handlePaste.bind(this);
-};
 
-InputMask.Module.prototype = {
+	var KEYCODE_BACKSPACE = 8,
+	    KEYCODE_CONTROL = 17,
+	    KEYCODE_DELETE = 46;
 
-	KEYCODE_BACKSPACE: 8,
-	KEYCODE_CONTROL: 17,
-	KEYCODE_DELETE: 46,
+	var self = this,
+	    _filteredKeys = [9, 13, 35, 36, 37, 38, 39, 40],
+	    _controlKeyDown = false,
+	    _element,
+	    _document,
+	    _window;
 
-	_controlKeyDown: false,
-
-	document: null,
-
-	element: null,
-
-	_filteredKeys: [9, 13, 35, 36, 37, 38, 39, 40],
-
-	options: null,
-
-	window: null,
-
-	constructor: InputMask.Module,
-
-	init: function(element) {
+	function init(element) {
 		if (element) {
-			this.setElement(element);
+			setElement(element);
 		}
 
-		this.element.addEventListener("focus", this.handleFocusIn, true);
-		this.element.addEventListener("blur", this.handleFocusOut, true);
-		this.element.addEventListener("keydown", this.handleKeyDown, false);
-		this.element.addEventListener("keypress", this.handleKeyPress, false);
-		this.element.addEventListener("keyup", this.handleKeyUp, false);
-		this.element.addEventListener("paste", this.handlePaste, false);
+		_element.addEventListener("focus", handleFocusIn, true);
+		_element.addEventListener("blur", handleFocusOut, true);
+		_element.addEventListener("keydown", handleKeyDown, false);
+		_element.addEventListener("keypress", handleKeyPress, false);
+		_element.addEventListener("keyup", handleKeyUp, false);
+		_element.addEventListener("paste", handlePaste, false);
 
-		return this;
-	},
+		return self;
+	}
 
-	destructor: function(keepElement) {
-		if (this.element) {
-			if (!keepElement) {
-				this.element.parentNode.removeChild(this.element);
+	function destructor() {
+		if (_element) {
+			_element.removeEventListener("focus", handleFocusIn, true);
+			_element.removeEventListener("blur", handleFocusOut, true);
+			_element.removeEventListener("keydown", handleKeyDown, false);
+			_element.removeEventListener("keypress", handleKeyPress, false);
+			_element.removeEventListener("keyup", handleKeyUp, false);
+			_element.removeEventListener("paste", handlePaste, false);
+		}
+
+		_element = _document = _window = null;
+	}
+
+	function getTemplate(element) {
+		return InputMask.getTemplateByElement(element);
+	}
+
+	function handleFocusIn(event) {
+		event = event || window.event;
+
+		if (isMaskable(event.target)) {
+			showMask(event.target);
+		}
+	}
+
+	function handleFocusOut(event) {
+		event = event || window.event;
+
+		if (isMaskable(event.target)) {
+			hideMask(event.target);
+		}
+	}
+
+	function handleKeyDown(event) {
+		event = event || window.event;
+
+		if (event.keyCode === KEYCODE_CONTROL) {
+			_controlKeyDown = true;
+		}
+		else if (isMaskable(event.target)) {
+			var keyCode = event.keyCode,
+			    element = event.target,
+			    start = element.selectionStart,
+			    end = element.selectionEnd,
+			    value = element.value,
+		        template = getTemplate(element),
+			    selection = null;
+
+			if (KEYCODE_BACKSPACE === keyCode) {
+				selection = (start === end)
+				          ? template.removePrevChar(start, value)
+				          : template.removeCharRange(start, end, value);
+			}
+			else if (KEYCODE_DELETE === keyCode) {
+				selection = (start === end)
+				          ? template.removeNextChar(start, value)
+				          : template.removeCharRange(start, end, value);
 			}
 
-			this.element.removeEventListener("focus", this.handleFocusIn, true);
-			this.element.removeEventListener("blur", this.handleFocusOut, true);
-			this.element.removeEventListener("keydown", this.handleKeyDown, false);
-			this.element.removeEventListener("keypress", this.handleKeyPress, false);
-			this.element.removeEventListener("keyup", this.handleKeyUp, false);
-			this.element.removeEventListener("paste", this.handlePaste, false);
+			if (selection) {
+				event.preventDefault();
+				element.value = selection.text;
+				element.setSelectionRange(selection.start, selection.end);
+			}
 		}
+	}
 
-		this.element = this.document = this.window = null;
-	},
-
-	_getTemplate: function(element) {
-		return InputMask.getTemplateByElement(element);
-	},
-
-	handleFocusIn: function(event) {
+	function handleKeyPress(event) {
 		event = event || window.event;
 
-		if (this._isMaskable(event.target)) {
-			this._showMask(event.target);
-		}
-	},
-
-	handleFocusOut: function(event) {
-		event = event || window.event;
-
-		if (this._isMaskable(event.target)) {
-			this._hideMask(event.target);
-		}
-	},
-
-	handleKeyDown: function(event) {
-		if ((event || window.event).keyCode === this.KEYCODE_CONTROL) {
-			this._controlKeyDown = true;
-		}
-	},
-
-	handleKeyPress: function(event) {
-		event = event || window.event;
-
-		if (!this._isMaskable(event.target)
-			|| this._filteredKeys.indexOf(event.keyCode) > -1
-			|| this._controlKeyDown) {
+		if (!isMaskable(event.target)
+			|| _filteredKeys.indexOf(event.keyCode) > -1
+			|| _controlKeyDown) {
 			return;
 		}
 
 		event.preventDefault();
 
-		var keyCode = event.keyCode,
-		    charCode = event.charCode,
+		var charCode = event.charCode,
 		    element = event.target,
 		    start = element.selectionStart,
-		    end = element.selectionEnd,
 		    value = element.value,
-		    template = this._getTemplate(element),
+		    template = getTemplate(element),
 		    selection = null;
 
-		if (this.KEYCODE_BACKSPACE === keyCode) {
-			selection = (start === end)
-			          ? template.removePrevChar(start, value)
-			          : template.removeCharRange(start, end, value);
-		}
-		else if (this.KEYCODE_DELETE === keyCode) {
-			selection = (start === end)
-			          ? template.removeNextChar(start, value)
-			          : template.removeCharRange(start, end, value);
-		}
-		else {
+		if (charCode > 0) {
 			selection = template.addCharacter(start, String.fromCharCode(charCode), value);
-		}
-
-		element.value = selection.text;
-		element.setSelectionRange(selection.start, selection.end);
-	},
-
-	handleKeyUp: function(event) {
-		if ((event || window.event).keyCode === this.KEYCODE_CONTROL) {
-			this._controlKeyDown = false;
-		}
-	},
-
-	handlePaste: function(event) {
-		event = event || window.event;
-
-		if (!this._isMaskable(event.target)) {
-			return;
-		}
-
-		event.preventDefault();
-
-		var clipboard = event.clipboardData,
-		    element = event.target,
-		    template, selection;
-
-		if (clipboard.types.contains("text/plain")) {
-			template = this._getTemplate(element);
-			selection = template.addCharacters(element.selectionStart, clipboard.getData("text/plain"), element.value);
 			element.value = selection.text;
 			element.setSelectionRange(selection.start, selection.end);
 		}
-	},
+	}
 
-	_hideMask: function(element) {
-		if (this._getTemplate(element).isEmptyValue(element.value)) {
+	function handleKeyUp(event) {
+		if ((event || window.event).keyCode === KEYCODE_CONTROL) {
+			_controlKeyDown = false;
+		}
+	}
+
+	function handlePaste(event) {
+		event = event || window.event;
+
+		if (!isMaskable(event.target)) {
+			return;
+		}
+
+		var clipboard = event.clipboardData || null,
+		    element = event.target,
+		    template, selection;
+
+		var processPaste = function(pastedText) {
+			template = getTemplate(element);
+			selection = template.addCharacters(element.selectionStart, pastedText, element.value);
+			element.value = selection.text;
+			element.setSelectionRange(selection.start, selection.end);
+		};
+
+		var waitForPaste = function(element) {
+			var start = element.selectionStart,
+			    end = element.selectionEnd,
+			    value = element.value,
+			    pastedText = "",
+			    calls = 0,
+			    maxCalls = 100;
+
+			var detectPaste = function() {
+				if (++calls === maxCalls) {
+					// We've waited 1 second for pasted text. Assume failure.
+					return;
+				}
+				else if (!element.value) {
+					setTimeout(detectPaste, 10);
+				}
+				else {
+					pastedText = element.value;
+					element.value = value;
+					element.setSelectionRange(start, end);
+					processPaste(pastedText);
+				}
+			};
+
+			element.value = "";
+
+			detectPaste();
+		};
+
+		if (!clipboard) {
+			waitForPaste(element);
+		}
+		else {
+			// Chrome: clipboard.types is an Array
+			// Firefox: clipboard.types is a different class
+			if (Array.prototype.indexOf.call(clipboard.types, "text/plain") > -1) {
+				event.preventDefault();
+				processPaste(clipboard.getData("text/plain"));
+			}
+		}
+	}
+
+	function hideMask(element) {
+		if (getTemplate(element).isEmptyValue(element.value)) {
 			element.value = "";
 		}
-	},
+	}
 
-	_isMaskable: function(element) {
+	function isMaskable(element) {
 		return (element.getAttribute("data-mask") || element.getAttribute("data-mask-name"))
 			&& !element.getAttribute("data-mask-disabled") && !InputMask.disabled ? true : false;
-	},
+	}
 
-	setElement: function(element) {
-		this.element = typeof element === "string"
-		             ? document.getElementById(element)
-		             : element;
-		this.document = this.element.ownerDocument;
-		this.window = this.document.defaultView;
-	},
+	function setElement(element) {
+		_element = typeof element === "string"
+		         ? document.getElementById(element)
+		         : element;
+		_document = _element.ownerDocument;
+		_window = _document.defaultView;
+	}
 
-	setOptions: function(options) {
-	},
+	function setOptions(options) {
+	}
 
-	_showMask: function(element) {
-		var template = this._getTemplate(element),
+	function showMask(element) {
+		var template = getTemplate(element),
 		    index = -1;
 
 		element.value = template.getMaskedValue(element.value);
@@ -617,4 +664,15 @@ InputMask.Module.prototype = {
 		}
 	}
 
-};
+	// Public interface
+	this.init = init;
+	this.destructor = destructor;
+	this.setElement = setElement;
+	this.setOptions = setOptions;
+
+	// "Private" interface
+	this._getTemplate = getTemplate;
+	this._hideMask = hideMask;
+	this._isMaskable = isMaskable;
+	this._showMask = showMask;
+}
