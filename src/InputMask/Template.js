@@ -54,6 +54,8 @@ Template.prototype = {
 	DIRECTION_BACKWARDS: -1,
 	DIRECTION_FORWARDS: 1,
 
+	emptyValue: null,
+
 	grammar: null,
 
 	mask: "",
@@ -119,30 +121,23 @@ Template.prototype = {
 		return selection;
 	},
 
-	getMaskedValue: function(value) {
-		var maskChars = this.mask.split(""),
-		    valueChars = value.split(""),
-		    i = 0, length = maskChars.length,
-		    mc, vc, maskedValue = "",
-		    grammar = this.grammar,
-		    placeholder = grammar.placeholder;
+	getEmptyValue: function() {
+		var c, i = 0, chars = [];
 
-		for (i; i < length; i++) {
-			mc = maskChars[i];
-			vc = valueChars[i] || "";
-
-			if (mc === grammar.charMarker) {
-				maskedValue += grammar.chars.test(vc) ? vc : placeholder;
-			}
-			else if (mc === grammar.digitMarker) {
-				maskedValue += grammar.digits.test(vc) ? vc : placeholder;
+		while (c = this.mask.charAt(i++)) {
+			if (c === this.grammar.digitMarker || c === this.grammar.charMarker) {
+				chars.push(this.grammar.placeholder);
 			}
 			else {
-				maskedValue += vc || mc;
+				chars.push(c);
 			}
 		}
 
-		return maskedValue;
+		return chars.join("");
+	},
+
+	getMaskedValue: function(value) {
+		return this.addCharacters(0, value, this.emptyValue).text;
 	},
 
 	getPlaceholder: function() {
@@ -282,6 +277,7 @@ Template.prototype = {
 
 		this.mask = mask;
 		this.maskChars = this.grammar.compile(mask);
+		this.emptyValue = this.getEmptyValue();
 	},
 
 	test: function(value) {

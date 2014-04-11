@@ -14,15 +14,24 @@
 	<table>
 		<tr>
 			<td>Telephone:</td>
-			<td><input type="text" data-mask="(###) ###-####"></td>
+			<td>
+				<input type="text" data-mask="(###) ###-####">
+				<button type="button" onclick="toggleMask(this)">Disable</button>
+			</td>
 		</tr>
 		<tr>
 			<td>Fax:</td>
-			<td><input type="text" data-mask="(###) ###-####" value="(555) 382-9476"></td>
+			<td>
+				<input type="text" data-mask="(###) ###-####" value="(555) 382-9476">
+				<button type="button" onclick="toggleMask(this)">Disable</button>
+			</td>
 		</tr>
 		<tr>
 			<td>SKU:</td>
-			<td><input type="text" data-mask="AAA ##-####"></td>
+			<td>
+				<input type="text" data-mask="AAA ##-####">
+				<button type="button" onclick="toggleMask(this)">Disable</button>
+			</td>
 		</tr>
 	</table>
 
@@ -64,6 +73,7 @@
 					insertCell(cells.length).innerHTML = mask;
 					insertCell(cells.length).innerHTML =
 						'<input type="text" data-mask="' + mask + '"> ' +
+						'<button type="button" onclick="toggleMask(this)">Disable</button> ' +
 						'<button type="button" onclick="removeMask(this);">X</button>';
 				}
 			}
@@ -76,6 +86,19 @@
 		function removeMask(button) {
 			var tr = button.parentNode.parentNode;
 			tr.parentNode.removeChild(tr);
+		}
+
+		function toggleMask(button) {
+			var input = button.parentNode.querySelector("input[type=text]");
+
+			if (button.innerHTML === "Disable") {
+				InputMask.disable(input);
+				button.innerHTML = "Enable";
+			}
+			else {
+				InputMask.enable(input);
+				button.innerHTML = "Disable";
+			}
 		}
 	</script>
 </body>

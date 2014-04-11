@@ -148,6 +148,16 @@ describe("InputMask.Template", function() {
 
 	});
 
+	describe("getEmptyValue", function() {
+
+		it("converts digit and char markers to placeholders", function() {
+			template.setMask("AAA: (###) ###-####");
+
+			expect(template.getEmptyValue()).toBe("___: (___) ___-____");
+		});
+
+	});
+
 	describe("getMaskedValue", function() {
 
 		beforeEach(function() {
@@ -164,6 +174,34 @@ describe("InputMask.Template", function() {
 			["123-4", "123-4___"]
 		], function(value, maskedValue) {
 			expect(template.getMaskedValue(value)).toBe(maskedValue);
+		});
+
+		it("formats valid values", function() {
+			var value = "1234567";
+			var maskedValue = template.getMaskedValue(value);
+
+			expect(maskedValue).toBe("123-4567");
+		});
+
+		it("formats partial valid values", function() {
+			var value = "1234";
+			var maskedValue = template.getMaskedValue(value);
+
+			expect(maskedValue).toBe("123-4___");
+		});
+
+		it("omits invalid characters", function() {
+			var value = "a1b2c3d4e";
+			var maskedValue = template.getMaskedValue(value);
+
+			expect(maskedValue).toBe("123-4___");
+		});
+
+		it("omits characters outside of the mask", function() {
+			var value = "12345678";
+			var maskedValue = template.getMaskedValue(value);
+
+			expect(maskedValue).toBe("123-4567");
 		});
 
 	});

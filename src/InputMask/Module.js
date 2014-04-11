@@ -158,7 +158,8 @@ InputMask.Module.prototype = {
 	},
 
 	_isMaskable: function(element) {
-		return element.getAttribute("data-mask") || element.getAttribute("data-mask-name") ? true : false;
+		return (element.getAttribute("data-mask") || element.getAttribute("data-mask-name"))
+			&& !element.getAttribute("data-mask-disabled") && !InputMask.disabled ? true : false;
 	},
 
 	setElement: function(element) {
