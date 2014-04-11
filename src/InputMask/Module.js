@@ -43,12 +43,8 @@ InputMask.Module.prototype = {
 		return this;
 	},
 
-	destructor: function(keepElement) {
+	destructor: function() {
 		if (this.element) {
-			if (!keepElement) {
-				this.element.parentNode.removeChild(this.element);
-			}
-
 			this.element.removeEventListener("focus", this.handleFocusIn, true);
 			this.element.removeEventListener("blur", this.handleFocusOut, true);
 			this.element.removeEventListener("keydown", this.handleKeyDown, false);
@@ -65,6 +61,7 @@ InputMask.Module.prototype = {
 	},
 
 	handleFocusIn: function(event) {
+		console.log("handleFocusIn");
 		event = event || window.event;
 
 		if (this._isMaskable(event.target)) {
@@ -81,8 +78,36 @@ InputMask.Module.prototype = {
 	},
 
 	handleKeyDown: function(event) {
-		if ((event || window.event).keyCode === this.KEYCODE_CONTROL) {
+		event = event || window.event;
+
+		if (event.keyCode === this.KEYCODE_CONTROL) {
 			this._controlKeyDown = true;
+		}
+		else if (this._isMaskable(event.target)) {
+			var keyCode = event.keyCode,
+			    element = event.target,
+			    start = element.selectionStart,
+			    end = element.selectionEnd,
+			    value = element.value,
+		        template = this._getTemplate(element),
+			    selection = null;
+
+			if (this.KEYCODE_BACKSPACE === keyCode) {
+				selection = (start === end)
+				          ? template.removePrevChar(start, value)
+				          : template.removeCharRange(start, end, value);
+			}
+			else if (this.KEYCODE_DELETE === keyCode) {
+				selection = (start === end)
+				          ? template.removeNextChar(start, value)
+				          : template.removeCharRange(start, end, value);
+			}
+
+			if (selection) {
+				event.preventDefault();
+				element.value = selection.text;
+				element.setSelectionRange(selection.start, selection.end);
+			}
 		}
 	},
 
@@ -97,31 +122,18 @@ InputMask.Module.prototype = {
 
 		event.preventDefault();
 
-		var keyCode = event.keyCode,
-		    charCode = event.charCode,
+		var charCode = event.charCode,
 		    element = event.target,
 		    start = element.selectionStart,
-		    end = element.selectionEnd,
 		    value = element.value,
 		    template = this._getTemplate(element),
 		    selection = null;
 
-		if (this.KEYCODE_BACKSPACE === keyCode) {
-			selection = (start === end)
-			          ? template.removePrevChar(start, value)
-			          : template.removeCharRange(start, end, value);
-		}
-		else if (this.KEYCODE_DELETE === keyCode) {
-			selection = (start === end)
-			          ? template.removeNextChar(start, value)
-			          : template.removeCharRange(start, end, value);
-		}
-		else {
+		if (charCode > 0) {
 			selection = template.addCharacter(start, String.fromCharCode(charCode), value);
+			element.value = selection.text;
+			element.setSelectionRange(selection.start, selection.end);
 		}
-
-		element.value = selection.text;
-		element.setSelectionRange(selection.start, selection.end);
 	},
 
 	handleKeyUp: function(event) {
@@ -137,17 +149,57 @@ InputMask.Module.prototype = {
 			return;
 		}
 
-		event.preventDefault();
-
-		var clipboard = event.clipboardData,
+		var clipboard = event.clipboardData || null,
 		    element = event.target,
+		    self = this,
 		    template, selection;
 
-		if (clipboard.types.contains("text/plain")) {
-			template = this._getTemplate(element);
-			selection = template.addCharacters(element.selectionStart, clipboard.getData("text/plain"), element.value);
+		if (!clipboard) {
+			waitForPaste(element);
+		}
+		else {
+			// Chrome: clipboard.types is an Array
+			// Firefox: clipboard.types is a different class
+			if (Array.prototype.indexOf.call(clipboard.types, "text/plain") > -1) {
+				event.preventDefault();
+				processPaste(clipboard.getData("text/plain"));
+			}
+		}
+
+		function processPaste(pastedText) {
+			template = self._getTemplate(element);
+			selection = template.addCharacters(element.selectionStart, pastedText, element.value);
 			element.value = selection.text;
 			element.setSelectionRange(selection.start, selection.end);
+		}
+
+		function waitForPaste(element) {
+			var start = element.selectionStart,
+			    end = element.selectionEnd,
+			    value = element.value,
+			    pastedText = "",
+			    calls = 0,
+			    maxCalls = 100;
+
+			var detectPaste = function() {
+				if (++calls === maxCalls) {
+					// We've waited 1 second for pasted text. Assume failure.
+					return;
+				}
+				else if (!element.value) {
+					setTimeout(detectPaste, 10);
+				}
+				else {
+					pastedText = element.value;
+					element.value = value;
+					element.setSelectionRange(start, end);
+					processPaste(pastedText);
+				}
+			};
+
+			element.value = "";
+
+			detectPaste();
 		}
 	},
 
