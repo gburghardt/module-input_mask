@@ -1,13 +1,13 @@
 {
-	"name": "input_mask_module",
+	"name": "module-input_mask",
 	"description": "InputMask is an easy to use JavaScript library for enforcing formatting on text boxes that requires no outside dependencies.",
 	"authors": [
 		"Greg Burghardt <greg_burghardt@yahoo.com>"
 	],
-	"homepage": "https://github.com/gburghardt/input_mask_module",
+	"homepage": "https://github.com/gburghardt/module-input_mask",
 	"license": "MIT",
 	"version": "1.0.0",
-	"repository": { "type": "git", "url": "https://github.com/gburghardt/input_mask_module.git" },
+	"repository": { "type": "git", "url": "https://github.com/gburghardt/module-input_mask.git" },
 	"main": [
 		"src/InputMask.js",
 		"src/InputMask/Grammar.js",
