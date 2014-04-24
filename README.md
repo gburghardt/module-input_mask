@@ -118,7 +118,7 @@ JavaScript framework.
 #### Integration With Foundry
 
 The `InputMask.Module` class was written to support the Module.IModule interface
-so that [Module Manager](https://github.com/gburghardt/module) in
+so that [Module Manager](https://github.com/gburghardt/module-manager) in
 [Foundry](https://github.com/gburghardt/foundry) can create this module
 automatically. Just add a `data-modules` attribute to the `html` tag:
 
